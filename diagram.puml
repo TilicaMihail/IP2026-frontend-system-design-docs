@@ -1,0 +1,230 @@
+@startuml
+hide empty description
+
+[*] --> AppBoot
+
+state AppBoot {
+  [*] --> CheckingSession
+  CheckingSession --> Unauthenticated : no valid token
+  CheckingSession --> Authenticated : valid token
+}
+
+AppBoot --> Unauthenticated
+AppBoot --> Authenticated
+
+state Unauthenticated {
+  [*] --> Landing
+  Landing --> Login : click login
+  Landing --> Register : click register
+  Login --> Authenticating : submit credentials
+  Register --> Registering : submit form
+
+  Authenticating --> Authenticated : success
+  Authenticating --> LoginError : failure
+  LoginError --> Login : retry
+
+  Registering --> Authenticated : success
+  Registering --> RegisterError : failure
+  RegisterError --> Register : retry
+}
+
+state Authenticated {
+  [*] --> ResolvingRole
+  ResolvingRole --> StudentArea : STUDENT
+  ResolvingRole --> TeacherArea : TEACHER
+  ResolvingRole --> AdminArea : ORG_ADMIN / PLATFORM_ADMIN
+  ResolvingRole --> Forbidden : no allowed role
+}
+
+state StudentArea {
+  [*] --> StudentDashboard
+
+  StudentDashboard --> StudentCourses : open courses
+  StudentDashboard --> StudentProgress : open progress
+  StudentDashboard --> Profile : open profile
+
+  state StudentCourses {
+    [*] --> CoursesListLoading
+    CoursesListLoading --> CoursesListReady : data loaded
+    CoursesListLoading --> CoursesListError : load failed
+    CoursesListError --> CoursesListLoading : retry
+
+    CoursesListReady --> CourseStudy : open course
+    CoursesListReady --> CoursesListReady : change tab/filter/search
+  }
+
+  state CourseStudy {
+    [*] --> CourseLoading
+    CourseLoading --> CourseReady : course + tree loaded
+    CourseLoading --> CourseError : load failed
+    CourseError --> CourseLoading : retry
+
+    state CourseReady {
+      [*] --> ViewingNode
+      ViewingNode --> ViewingNode : select node / expand tree / collapse tree
+      ViewingNode --> UpdatingProgress : mark resource visited/completed
+      UpdatingProgress --> ViewingNode : success
+      UpdatingProgress --> ViewingNode : failure
+      ViewingNode --> TestConfig : generate custom test
+      ViewingNode --> FixedTestStarting : start fixed test
+      FixedTestStarting --> TestRunner : session created
+    }
+  }
+
+  state TestConfig {
+    [*] --> ConfigEditing
+    ConfigEditing --> GeneratingTest : submit generate request
+    GeneratingTest --> TestRunner : success
+    GeneratingTest --> TestConfigError : failure
+    TestConfigError --> ConfigEditing : retry
+  }
+
+  state TestRunner {
+    [*] --> SessionLoading
+    SessionLoading --> InProgress : session loaded
+    SessionLoading --> RunnerError : load failed
+    RunnerError --> SessionLoading : retry
+
+    InProgress --> InProgress : select answer / navigate / autosave
+    InProgress --> SubmittingTest : submit
+    SubmittingTest --> TestResults : success
+    SubmittingTest --> InProgress : submit failed
+  }
+
+  state TestResults {
+    [*] --> ResultsLoading
+    ResultsLoading --> ResultsReady : loaded
+    ResultsLoading --> ResultsError : failed
+    ResultsError --> ResultsLoading : retry
+    ResultsReady --> CourseStudy : back to course
+    ResultsReady --> StudentProgress : view history
+    ResultsReady --> TestConfig : generate another test
+  }
+
+  state StudentProgress {
+    [*] --> ProgressLoading
+    ProgressLoading --> ProgressReady : loaded
+    ProgressLoading --> ProgressError : failed
+    ProgressError --> ProgressLoading : retry
+    ProgressReady --> CourseStudy : open course
+    ProgressReady --> TestResults : open attempt
+  }
+}
+
+state TeacherArea {
+  [*] --> TeacherDashboard
+
+  TeacherDashboard --> TeacherCourses : open my courses
+  TeacherDashboard --> TeacherClasses : open classes
+  TeacherDashboard --> Profile : open profile
+
+  state TeacherCourses {
+    [*] --> TeacherCoursesLoading
+    TeacherCoursesLoading --> TeacherCoursesReady : loaded
+    TeacherCoursesLoading --> TeacherCoursesError : failed
+    TeacherCoursesError --> TeacherCoursesLoading : retry
+
+    TeacherCoursesReady --> CourseEditor : edit course
+    TeacherCoursesReady --> AssignmentManagement : manage assignments
+    TeacherCoursesReady --> CoursePreview : preview course
+  }
+
+  state CourseEditor {
+    [*] --> EditorLoading
+    EditorLoading --> EditingCourse : loaded
+    EditorLoading --> EditorError : failed
+    EditorError --> EditorLoading : retry
+
+    EditingCourse --> EditingCourse : select node / edit metadata / add node / delete node / reorder node
+    EditingCourse --> SavingDraft : autosave/manual save
+    SavingDraft --> EditingCourse : success
+    SavingDraft --> EditingCourse : failure
+    EditingCourse --> PublishingCourse : publish
+    PublishingCourse --> EditingCourse : published
+    EditingCourse --> AssignmentManagement : open assignments
+    EditingCourse --> CoursePreview : preview
+  }
+
+  state AssignmentManagement {
+    [*] --> AssignmentLoading
+    AssignmentLoading --> AssignmentReady : loaded
+    AssignmentLoading --> AssignmentError : failed
+    AssignmentError --> AssignmentLoading : retry
+
+    AssignmentReady --> AssignmentReady : add class / remove class / update assignment
+    AssignmentReady --> TeacherClasses : inspect class
+  }
+
+  state TeacherClasses {
+    [*] --> ClassesLoading
+    ClassesLoading --> ClassesReady : loaded
+    ClassesLoading --> ClassesError : failed
+    ClassesError --> ClassesLoading : retry
+    ClassesReady --> ClassDetail : open class
+  }
+
+  state ClassDetail {
+    [*] --> ClassDetailLoading
+    ClassDetailLoading --> ClassDetailReady : loaded
+    ClassDetailLoading --> ClassDetailError : failed
+    ClassDetailError --> ClassDetailLoading : retry
+    ClassDetailReady --> TestResults : open student attempt
+  }
+
+  state CoursePreview {
+    [*] --> PreviewLoading
+    PreviewLoading --> PreviewReady : loaded
+    PreviewLoading --> PreviewError : failed
+    PreviewError --> PreviewLoading : retry
+  }
+}
+
+state AdminArea {
+  [*] --> AdminDashboard
+
+  AdminDashboard --> UserManagement : open users
+  AdminDashboard --> ClassManagement : open classes
+  AdminDashboard --> TeacherAssignmentManagement : open teacher assignments
+  AdminDashboard --> OrganizationSettings : open settings
+  AdminDashboard --> Profile : open profile
+
+  state UserManagement {
+    [*] --> UserTableLoading
+    UserTableLoading --> UserTableReady : loaded
+    UserTableLoading --> UserTableError : failed
+    UserTableError --> UserTableLoading : retry
+    UserTableReady --> UserTableReady : create / edit / deactivate / filter
+  }
+
+  state ClassManagement {
+    [*] --> ClassTableLoading
+    ClassTableLoading --> ClassTableReady : loaded
+    ClassTableLoading --> ClassTableError : failed
+    ClassTableError --> ClassTableLoading : retry
+    ClassTableReady --> ClassTableReady : create / edit / delete / enroll students
+  }
+
+  state TeacherAssignmentManagement {
+    [*] --> TeacherAssignLoading
+    TeacherAssignLoading --> TeacherAssignReady : loaded
+    TeacherAssignLoading --> TeacherAssignError : failed
+    TeacherAssignError --> TeacherAssignLoading : retry
+    TeacherAssignReady --> TeacherAssignReady : assign / remove teacher
+  }
+
+  state OrganizationSettings {
+    [*] --> SettingsLoading
+    SettingsLoading --> SettingsReady : loaded
+    SettingsLoading --> SettingsError : failed
+    SettingsError --> SettingsLoading : retry
+    SettingsReady --> SettingsSaving : save changes
+    SettingsSaving --> SettingsReady : success
+    SettingsSaving --> SettingsReady : failure
+  }
+}
+
+Profile --> Authenticated : back
+Forbidden --> [*]
+Authenticated --> Unauthenticated : logout
+
+@enduml
