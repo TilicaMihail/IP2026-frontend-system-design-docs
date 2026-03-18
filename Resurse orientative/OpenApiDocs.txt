@@ -1,0 +1,1735 @@
+#paste in swagger editor pls
+
+openapi: 3.0.3
+info:
+  title: AI E-Learning Platform API
+  version: 1.0.0
+  description: |
+    Main backend API for the AI-powered e-learning platform.
+    Public/frontend clients talk only to the Java backend.
+    The Java backend orchestrates persistence, permissions, and AI module calls.
+
+servers:
+  - url: https://api.example.com
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Organizations
+  - name: Classes
+  - name: Courses
+  - name: Course Nodes
+  - name: Assignments
+  - name: Progress
+  - name: Tests
+  - name: Attempts
+  - name: Dashboards
+  - name: Admin
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register public student account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get own profile
+      responses:
+        '200':
+          description: Own profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+    put:
+      tags: [Users]
+      summary: Update own profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /users/me/password:
+    put:
+      tags: [Users]
+      summary: Change own password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed
+
+  /student/dashboard:
+    get:
+      tags: [Dashboards]
+      summary: Student dashboard data
+      responses:
+        '200':
+          description: Student dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentDashboardResponse'
+
+  /teacher/dashboard:
+    get:
+      tags: [Dashboards]
+      summary: Teacher dashboard data
+      responses:
+        '200':
+          description: Teacher dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherDashboardResponse'
+
+  /admin/dashboard:
+    get:
+      tags: [Dashboards]
+      summary: Admin dashboard data
+      responses:
+        '200':
+          description: Admin dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDashboardResponse'
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: List visible courses
+      parameters:
+        - in: query
+          name: tab
+          schema:
+            type: string
+            enum: [assigned, public, completed, owned]
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: visibility
+          schema:
+            type: string
+            enum: [PRIVATE, CLASS_ASSIGNED, ORGANIZATION_WIDE, PUBLIC]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [DRAFT, PUBLISHED, ARCHIVED]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Paged list of courses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedCourseSummaryResponse'
+
+    post:
+      tags: [Courses]
+      summary: Create course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCourseRequest'
+      responses:
+        '201':
+          description: Created course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetail'
+
+  /courses/{courseId}:
+    get:
+      tags: [Courses]
+      summary: Get course details
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      responses:
+        '200':
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetail'
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+    put:
+      tags: [Courses]
+      summary: Update course metadata
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCourseRequest'
+      responses:
+        '200':
+          description: Updated course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetail'
+
+  /courses/{courseId}/publish:
+    post:
+      tags: [Courses]
+      summary: Publish course
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      responses:
+        '200':
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetail'
+
+  /courses/{courseId}/archive:
+    post:
+      tags: [Courses]
+      summary: Archive course
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetail'
+
+  /courses/{courseId}/tree:
+    get:
+      tags: [Course Nodes]
+      summary: Get full course tree
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      responses:
+        '200':
+          description: Course tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseTreeResponse'
+
+  /courses/{courseId}/nodes:
+    post:
+      tags: [Course Nodes]
+      summary: Create course node
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCourseNodeRequest'
+      responses:
+        '201':
+          description: Created node
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseNode'
+
+  /course-nodes/{nodeId}:
+    get:
+      tags: [Course Nodes]
+      summary: Get single course node
+      parameters:
+        - $ref: '#/components/parameters/nodeId'
+      responses:
+        '200':
+          description: Course node
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseNode'
+
+    put:
+      tags: [Course Nodes]
+      summary: Update course node
+      parameters:
+        - $ref: '#/components/parameters/nodeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCourseNodeRequest'
+      responses:
+        '200':
+          description: Updated node
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseNode'
+
+    delete:
+      tags: [Course Nodes]
+      summary: Delete course node
+      parameters:
+        - $ref: '#/components/parameters/nodeId'
+      responses:
+        '204':
+          description: Deleted
+
+  /course-nodes/{nodeId}/move:
+    post:
+      tags: [Course Nodes]
+      summary: Move or reorder node
+      parameters:
+        - $ref: '#/components/parameters/nodeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveCourseNodeRequest'
+      responses:
+        '200':
+          description: Node moved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseTreeResponse'
+
+  /courses/{courseId}/progress/me:
+    get:
+      tags: [Progress]
+      summary: Get current user's progress for course
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      responses:
+        '200':
+          description: Course progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseProgress'
+
+  /courses/{courseId}/progress:
+    post:
+      tags: [Progress]
+      summary: Update course progress
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCourseProgressRequest'
+      responses:
+        '200':
+          description: Updated course progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseProgress'
+
+  /progress/me:
+    get:
+      tags: [Progress]
+      summary: Get student progress summary
+      parameters:
+        - in: query
+          name: courseId
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Progress summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProgressSummaryResponse'
+
+  /courses/{courseId}/assignments:
+    get:
+      tags: [Assignments]
+      summary: Get course assignments
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      responses:
+        '200':
+          description: Course assignments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseAssignmentsResponse'
+
+    post:
+      tags: [Assignments]
+      summary: Assign course to classes
+      parameters:
+        - $ref: '#/components/parameters/courseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCourseAssignmentRequest'
+      responses:
+        '201':
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseAssignmentsResponse'
+
+  /assignments/{assignmentId}:
+    delete:
+      tags: [Assignments]
+      summary: Remove assignment
+      parameters:
+        - $ref: '#/components/parameters/assignmentId'
+      responses:
+        '204':
+          description: Removed
+
+  /classes:
+    get:
+      tags: [Classes]
+      summary: List classes visible to current user
+      parameters:
+        - in: query
+          name: organizationId
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Class list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassGroupListResponse'
+
+    post:
+      tags: [Classes]
+      summary: Create class group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassGroupRequest'
+      responses:
+        '201':
+          description: Created class group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassGroup'
+
+  /classes/{classGroupId}:
+    get:
+      tags: [Classes]
+      summary: Get class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+      responses:
+        '200':
+          description: Class details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassGroupDetail'
+
+    put:
+      tags: [Classes]
+      summary: Update class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClassGroupRequest'
+      responses:
+        '200':
+          description: Updated class group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassGroup'
+
+    delete:
+      tags: [Classes]
+      summary: Delete class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+      responses:
+        '204':
+          description: Deleted
+
+  /classes/{classGroupId}/students:
+    get:
+      tags: [Classes]
+      summary: List students in class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+      responses:
+        '200':
+          description: Students in class
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassStudentsResponse'
+
+    post:
+      tags: [Classes]
+      summary: Enroll students in class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollStudentsRequest'
+      responses:
+        '200':
+          description: Updated students in class
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassStudentsResponse'
+
+  /classes/{classGroupId}/students/{studentId}:
+    delete:
+      tags: [Classes]
+      summary: Remove student from class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+        - $ref: '#/components/parameters/studentId'
+      responses:
+        '204':
+          description: Removed
+
+  /classes/{classGroupId}/teachers:
+    get:
+      tags: [Classes]
+      summary: List teachers assigned to class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+      responses:
+        '200':
+          description: Teachers assigned to class
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassTeachersResponse'
+
+    post:
+      tags: [Classes]
+      summary: Assign teachers to class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTeachersRequest'
+      responses:
+        '200':
+          description: Updated teachers in class
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassTeachersResponse'
+
+  /classes/{classGroupId}/teachers/{teacherId}:
+    delete:
+      tags: [Classes]
+      summary: Remove teacher from class group
+      parameters:
+        - $ref: '#/components/parameters/classGroupId'
+        - $ref: '#/components/parameters/teacherId'
+      responses:
+        '204':
+          description: Removed
+
+  /tests/fixed/{testId}/start:
+    post:
+      tags: [Tests]
+      summary: Start fixed test
+      parameters:
+        - in: path
+          name: testId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Test session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestSession'
+
+  /tests/generate:
+    post:
+      tags: [Tests]
+      summary: Request generated test
+      description: |
+        Java backend validates access and orchestrates AI generation.
+        Python AI module is not exposed directly to frontend.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateTestRequest'
+      responses:
+        '201':
+          description: Generated test session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestSession'
+
+  /test-sessions/{testSessionId}:
+    get:
+      tags: [Tests]
+      summary: Get active test session
+      parameters:
+        - $ref: '#/components/parameters/testSessionId'
+      responses:
+        '200':
+          description: Test session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestSession'
+
+  /test-sessions/{testSessionId}/answers:
+    put:
+      tags: [Tests]
+      summary: Save or update answers in active test session
+      parameters:
+        - $ref: '#/components/parameters/testSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveTestAnswersRequest'
+      responses:
+        '200':
+          description: Answers saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestSession'
+
+  /test-sessions/{testSessionId}/submit:
+    post:
+      tags: [Tests]
+      summary: Submit test session
+      parameters:
+        - $ref: '#/components/parameters/testSessionId'
+      responses:
+        '200':
+          description: Submission result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitTestResponse'
+
+  /attempts/me:
+    get:
+      tags: [Attempts]
+      summary: List current user's attempts
+      parameters:
+        - in: query
+          name: courseId
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Attempt list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptListResponse'
+
+  /attempts/{attemptId}:
+    get:
+      tags: [Attempts]
+      summary: Get attempt details
+      parameters:
+        - $ref: '#/components/parameters/attemptId'
+      responses:
+        '200':
+          description: Attempt details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptDetail'
+
+  /attempts/{attemptId}/review:
+    get:
+      tags: [Attempts]
+      summary: Get attempt review payload
+      parameters:
+        - $ref: '#/components/parameters/attemptId'
+      responses:
+        '200':
+          description: Attempt review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptReviewResponse'
+
+  /attempts/{attemptId}/mastery:
+    get:
+      tags: [Attempts]
+      summary: Get topic mastery impact for attempt
+      parameters:
+        - $ref: '#/components/parameters/attemptId'
+      responses:
+        '200':
+          description: Mastery results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptMasteryResponse'
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users
+      parameters:
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [STUDENT, TEACHER, ORG_ADMIN, PLATFORM_ADMIN]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE]
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+
+    post:
+      tags: [Admin]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /admin/users/{userId}:
+    put:
+      tags: [Admin]
+      summary: Update user
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /admin/users/{userId}/deactivate:
+    post:
+      tags: [Admin]
+      summary: Deactivate user
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        '204':
+          description: User deactivated
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    courseId:
+      in: path
+      name: courseId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    nodeId:
+      in: path
+      name: nodeId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    classGroupId:
+      in: path
+      name: classGroupId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    assignmentId:
+      in: path
+      name: assignmentId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    testSessionId:
+      in: path
+      name: testSessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    attemptId:
+      in: path
+      name: attemptId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    studentId:
+      in: path
+      name: studentId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    teacherId:
+      in: path
+      name: teacherId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    userId:
+      in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        fullName:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [accessToken, user]
+      properties:
+        accessToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/CurrentUser'
+
+    CurrentUserResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/CurrentUser'
+
+    CurrentUser:
+      type: object
+      required: [id, email, fullName, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [STUDENT, TEACHER, ORG_ADMIN, PLATFORM_ADMIN]
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationMembership'
+
+    UserProfile:
+      type: object
+      required: [id, email, fullName, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+
+    OrganizationMembership:
+      type: object
+      required: [organizationId, role, status]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        role:
+          type: string
+          enum: [STUDENT, TEACHER, ORG_ADMIN]
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+    CourseSummary:
+      type: object
+      required: [id, title, visibility, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        shortDescription:
+          type: string
+        visibility:
+          type: string
+          enum: [PRIVATE, CLASS_ASSIGNED, ORGANIZATION_WIDE, PUBLIC]
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+        ownerType:
+          type: string
+          enum: [ORGANIZATION, USER, PLATFORM]
+        progressPercent:
+          type: number
+          format: double
+
+    PagedCourseSummaryResponse:
+      type: object
+      required: [items, page, size, totalElements, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseSummary'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    CourseDetail:
+      type: object
+      required: [id, title, visibility, status, ownerType]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        ownerType:
+          type: string
+          enum: [ORGANIZATION, USER, PLATFORM]
+        ownerId:
+          type: string
+          format: uuid
+          nullable: true
+        visibility:
+          type: string
+          enum: [PRIVATE, CLASS_ASSIGNED, ORGANIZATION_WIDE, PUBLIC]
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+        createdByUserId:
+          type: string
+          format: uuid
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCourseRequest:
+      type: object
+      required: [title, ownerType, visibility]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        ownerType:
+          type: string
+          enum: [ORGANIZATION, USER, PLATFORM]
+        ownerId:
+          type: string
+          format: uuid
+          nullable: true
+        visibility:
+          type: string
+          enum: [PRIVATE, CLASS_ASSIGNED, ORGANIZATION_WIDE, PUBLIC]
+
+    UpdateCourseRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        visibility:
+          type: string
+          enum: [PRIVATE, CLASS_ASSIGNED, ORGANIZATION_WIDE, PUBLIC]
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+
+    CourseTreeResponse:
+      type: object
+      required: [courseId, rootNodes]
+      properties:
+        courseId:
+          type: string
+          format: uuid
+        rootNodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseNode'
+
+    CourseNode:
+      type: object
+      required: [id, courseId, nodeType, title, orderIndex]
+      properties:
+        id:
+          type: string
+          format: uuid
+        courseId:
+          type: string
+          format: uuid
+        parentNodeId:
+          type: string
+          format: uuid
+          nullable: true
+        nodeType:
+          type: string
+          enum: [SECTION, RESOURCE]
+        resourceType:
+          type: string
+          enum: [PDF, VIDEO, MARKDOWN, TEXT, LINK]
+          nullable: true
+        title:
+          type: string
+        content:
+          type: string
+          nullable: true
+        resourceUrl:
+          type: string
+          nullable: true
+        orderIndex:
+          type: integer
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseNode'
+
+    CreateCourseNodeRequest:
+      type: object
+      required: [nodeType, title]
+      properties:
+        parentNodeId:
+          type: string
+          format: uuid
+          nullable: true
+        nodeType:
+          type: string
+          enum: [SECTION, RESOURCE]
+        resourceType:
+          type: string
+          enum: [PDF, VIDEO, MARKDOWN, TEXT, LINK]
+          nullable: true
+        title:
+          type: string
+        content:
+          type: string
+          nullable: true
+        resourceUrl:
+          type: string
+          nullable: true
+        orderIndex:
+          type: integer
+          nullable: true
+
+    UpdateCourseNodeRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+          nullable: true
+        resourceUrl:
+          type: string
+          nullable: true
+        orderIndex:
+          type: integer
+
+    MoveCourseNodeRequest:
+      type: object
+      required: [targetParentNodeId, targetOrderIndex]
+      properties:
+        targetParentNodeId:
+          type: string
+          format: uuid
+          nullable: true
+        targetOrderIndex:
+          type: integer
+
+    CourseProgress:
+      type: object
+      required: [courseId, completedResourceCount, totalResourceCount, progressPercent]
+      properties:
+        courseId:
+          type: string
+          format: uuid
+        completedResourceCount:
+          type: integer
+        totalResourceCount:
+          type: integer
+        progressPercent:
+          type: number
+          format: double
+        lastVisitedNodeId:
+          type: string
+          format: uuid
+          nullable: true
+
+    UpdateCourseProgressRequest:
+      type: object
+      properties:
+        completedNodeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        lastVisitedNodeId:
+          type: string
+          format: uuid
+          nullable: true
+
+    StudentProgressSummaryResponse:
+      type: object
+      required: [courses, topicMastery]
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseProgress'
+        topicMastery:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopicMastery'
+
+    TopicMastery:
+      type: object
+      required: [topicKey, masteryScore]
+      properties:
+        topicKey:
+          type: string
+        masteryScore:
+          type: number
+          format: double
+
+    CreateCourseAssignmentRequest:
+      type: object
+      required: [classGroupIds]
+      properties:
+        classGroupIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    CourseAssignmentsResponse:
+      type: object
+      required: [courseId, assignments]
+      properties:
+        courseId:
+          type: string
+          format: uuid
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseAssignment'
+
+    CourseAssignment:
+      type: object
+      required: [id, classGroupId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        classGroupId:
+          type: string
+          format: uuid
+        classGroupName:
+          type: string
+
+    ClassGroup:
+      type: object
+      required: [id, organizationId, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        academicYear:
+          type: string
+
+    ClassGroupDetail:
+      allOf:
+        - $ref: '#/components/schemas/ClassGroup'
+        - type: object
+          properties:
+            studentCount:
+              type: integer
+            teacherCount:
+              type: integer
+
+    CreateClassGroupRequest:
+      type: object
+      required: [organizationId, name]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        academicYear:
+          type: string
+
+    UpdateClassGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        academicYear:
+          type: string
+
+    ClassGroupListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClassGroup'
+
+    ClassStudentsResponse:
+      type: object
+      required: [classGroupId, students]
+      properties:
+        classGroupId:
+          type: string
+          format: uuid
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+
+    EnrollStudentsRequest:
+      type: object
+      required: [studentIds]
+      properties:
+        studentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    ClassTeachersResponse:
+      type: object
+      required: [classGroupId, teachers]
+      properties:
+        classGroupId:
+          type: string
+          format: uuid
+        teachers:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+
+    AssignTeachersRequest:
+      type: object
+      required: [teacherIds]
+      properties:
+        teacherIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    GenerateTestRequest:
+      type: object
+      required: [courseId, questionCount]
+      properties:
+        courseId:
+          type: string
+          format: uuid
+        nodeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, HARD, ADAPTIVE]
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 100
+        questionType:
+          type: string
+          enum: [MULTIPLE_CHOICE]
+
+    TestSession:
+      type: object
+      required: [id, courseId, sessionType, status, questions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        courseId:
+          type: string
+          format: uuid
+        sessionType:
+          type: string
+          enum: [FIXED, GENERATED]
+        sourceTestId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [IN_PROGRESS, SUBMITTED, EXPIRED]
+        startedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestQuestion'
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestAnswer'
+
+    TestQuestion:
+      type: object
+      required: [id, prompt, options]
+      properties:
+        id:
+          type: string
+        prompt:
+          type: string
+        topicKey:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestOption'
+
+    TestOption:
+      type: object
+      required: [id, label]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+
+    TestAnswer:
+      type: object
+      required: [questionId, selectedOptionId]
+      properties:
+        questionId:
+          type: string
+        selectedOptionId:
+          type: string
+
+    SaveTestAnswersRequest:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestAnswer'
+
+    SubmitTestResponse:
+      type: object
+      required: [attemptId, scorePercent]
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        scorePercent:
+          type: number
+          format: double
+
+    AttemptListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttemptSummary'
+
+    AttemptSummary:
+      type: object
+      required: [id, courseId, sessionType, scorePercent, submittedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        courseId:
+          type: string
+          format: uuid
+        sessionType:
+          type: string
+          enum: [FIXED, GENERATED]
+        scorePercent:
+          type: number
+          format: double
+        submittedAt:
+          type: string
+          format: date-time
+
+    AttemptDetail:
+      type: object
+      required: [id, courseId, sessionType, scorePercent, submittedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        courseId:
+          type: string
+          format: uuid
+        sessionType:
+          type: string
+          enum: [FIXED, GENERATED]
+        scorePercent:
+          type: number
+          format: double
+        submittedAt:
+          type: string
+          format: date-time
+
+    AttemptReviewResponse:
+      type: object
+      required: [attemptId, questions]
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewedQuestion'
+
+    ReviewedQuestion:
+      type: object
+      required: [questionId, prompt, options, selectedOptionId, correctOptionId, isCorrect]
+      properties:
+        questionId:
+          type: string
+        prompt:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestOption'
+        selectedOptionId:
+          type: string
+        correctOptionId:
+          type: string
+        isCorrect:
+          type: boolean
+
+    AttemptMasteryResponse:
+      type: object
+      required: [attemptId, topicMastery]
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        topicMastery:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopicMastery'
+
+    StudentDashboardResponse:
+      type: object
+      properties:
+        assignedCourses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseSummary'
+        recentAttempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttemptSummary'
+        progressSummary:
+          $ref: '#/components/schemas/StudentProgressSummaryResponse'
+
+    TeacherDashboardResponse:
+      type: object
+      properties:
+        ownedCourses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseSummary'
+        classGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClassGroup'
+        recentActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttemptSummary'
+
+    AdminDashboardResponse:
+      type: object
+      properties:
+        userCount:
+          type: integer
+        classCount:
+          type: integer
+        courseCount:
+          type: integer
+
+    UserListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+
+    CreateUserRequest:
+      type: object
+      required: [email, fullName, role]
+      properties:
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [STUDENT, TEACHER, ORG_ADMIN, PLATFORM_ADMIN]
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
