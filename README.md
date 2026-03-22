@@ -19,11 +19,11 @@ Centralized documentation repository for the frontend team.
 
 ## Main Resource
 
-> **The most important resource is the Frontend Plan on Pages.**  
+> **The most important resource is the Frontend Page-by-Page Overview.**  
 > It should be treated as the main reference point for frontend planning, structure, and alignment across the team.
 
-### Frontend Plan on Pages
-[Open the Frontend Plan on Pages](https://docs.google.com/document/d/1vYd7m7Ta-eomltcuuQDOKFDYc-zZGX-s5rBIV_RZ7xE/edit?usp=sharing)
+### Frontend Page-by-Page Overview
+[Open the Frontend Page-by-Page Overview](https://docs.google.com/document/d/1vYd7m7Ta-eomltcuuQDOKFDYc-zZGX-s5rBIV_RZ7xE/edit?usp=sharing)
 
 ## Design Inspiration Resources
 
